@@ -59,6 +59,7 @@ find /alpine -iname "*~" -delete
 
 # zeroing out the partition
 dd if=/dev/zero of=/alpine/EMPTY bs=1M | true
+sync
 rm -vf /alpine/EMPTY
 
 umount -lf /alpine
