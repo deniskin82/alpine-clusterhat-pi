@@ -1,3 +1,7 @@
+#
+# based on https://github.com/shanty-social/baseos
+#
+
 PWD=$(shell pwd)
 
 .PHONY: build
