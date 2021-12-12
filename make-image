@@ -15,7 +15,7 @@ n
 p
 1
 
-+128MB
++512MB
 t
 c
 n
@@ -56,6 +56,10 @@ rm -rf /alpine/bootstrap/
 rm  /alpine/env.sh /alpine/etc/resolv.conf /alpine/enter-chroot /alpine/destroy
 find /alpine -iname "*-" -delete
 find /alpine -iname "*~" -delete
+
+# zeroing out the partition
+dd if=/dev/zero of=/alpine/EMPTY bs=1M | true
+rm -vf /alpine/EMPTY
 
 umount -lf /alpine
 
