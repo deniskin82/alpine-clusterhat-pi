@@ -8,7 +8,10 @@ cat <<EOF > /usr/bin/first-boot
 #!/bin/sh
 set -xe
 
-cat <<PARTED | sudo parted ---pretend-input-tty /dev/mmcblk0
+ROOT_PART="/dev/disk/by-label/ROOT"
+ROOT_DEV=$(lsblk -ndo pkname ${ROOT_PART})
+
+cat <<PARTED | sudo parted ---pretend-input-tty ${ROOT_DEV}
 unit %
 resizepart 2
 Yes
@@ -16,7 +19,7 @@ Yes
 PARTED
 
 partprobe
-resize2fs /dev/mmcblk0p2
+resize2fs ${ROOT_PART}
 rc-update del first-boot
 rm /etc/init.d/first-boot /usr/bin/first-boot
 
