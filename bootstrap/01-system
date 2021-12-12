@@ -3,7 +3,7 @@
 set -xe
 
 TARGET_HOSTNAME="raspberrypi"
-TARGET_TIMEZONE="Europe/Madrid"
+TARGET_TIMEZONE="Etc/UTC"
 ROOT_PASS=raspberry
 
 # base stuff
@@ -12,7 +12,7 @@ update-ca-certificates
 echo "root:$ROOT_PASS" | chpasswd
 setup-hostname $TARGET_HOSTNAME
 echo "127.0.0.1    $TARGET_HOSTNAME $TARGET_HOSTNAME.localdomain" > /etc/hosts
-setup-keymap es es
+setup-keymap us us
 
 # time
 apk add chrony tzdata
