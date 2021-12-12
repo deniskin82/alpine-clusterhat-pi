@@ -9,9 +9,9 @@ cat <<EOF > /usr/bin/first-boot
 set -xe
 
 ROOT_PART="/dev/disk/by-label/ROOT"
-ROOT_DEV=\$(lsblk -ndo pkname ${ROOT_PART})
+ROOT_DEV=\$(lsblk -ndo pkname \${ROOT_PART})
 
-cat <<PARTED | sudo parted ---pretend-input-tty ${ROOT_DEV}
+cat <<PARTED | sudo parted ---pretend-input-tty \${ROOT_DEV}
 unit %
 resizepart 2
 Yes
@@ -19,7 +19,7 @@ Yes
 PARTED
 
 partprobe
-resize2fs ${ROOT_PART}
+resize2fs \${ROOT_PART}
 rc-update del first-boot
 rm /etc/init.d/first-boot /usr/bin/first-boot
 
