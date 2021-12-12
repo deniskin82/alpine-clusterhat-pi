@@ -9,7 +9,7 @@ cat <<EOF > /usr/bin/first-boot
 set -xe
 
 ROOT_PART="/dev/disk/by-label/ROOT"
-ROOT_DEV=\$(lsblk -ndo pkname \${ROOT_PART})
+ROOT_DEV="/dev/\$(lsblk -ndo pkname \${ROOT_PART})"
 
 cat <<PARTED | sudo parted ---pretend-input-tty \${ROOT_DEV}
 unit %
