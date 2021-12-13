@@ -2,10 +2,10 @@
 
 set -xe
 
-apk add linux-rpi linux-rpi4 raspberrypi-bootloader zram-init
+apk add linux-rpi linux-rpi4 linux-firmware-brcm raspberrypi-bootloader zram-init
 rc-update add zram-init boot
 
-echo "modules=loop,squashfs,sd-mod,usb-storage root=LABEL=ROOT rootfstype=ext4 elevator=deadline fsck.repair=yes console=tty1 rootwait quiet" > /boot/cmdline.txt
+echo "modules=loop,squashfs,sd-mod,usb-storage root=LABEL=ROOT rw rootfstype=ext4 elevator=deadline fsck.repair=yes console=serial0,115200 console=tty1 selinux=0 rootwait quiet smsc95xx.turbo_mode=N dwc_otg.lpm_enable=0 kgdboc=serial0,115200 usbhid.mousepoll=8 snd-bcm2835.enable_compat_alsa=1 snd_bcm2835.enable_headphones=1 audit=0" > /boot/cmdline.txt
 
 cat <<EOF > /boot/config.txt
 [pi3]
@@ -16,14 +16,21 @@ kernel=vmlinuz-rpi
 initramfs initramfs-rpi
 [pi4]
 enable_gic=1
+# Enable DRM VC4 V3D driver on top of the dispmanx display stack
+dtoverlay=vc4-fkms-v3d
+max_framebuffers=2
 kernel=vmlinuz-rpi4
 initramfs initramfs-rpi4
 [all]
 arm_64bit=1
+enable_uart=1
+# disable_splash=1
+dtparam=audio=on
 include usercfg.txt
 EOF
 
 cat <<EOF > /boot/usercfg.txt
+dtparam=i2c=on
 EOF
 
 # fstab
@@ -37,4 +44,8 @@ vm.vfs_cache_pressure=500
 vm.swappiness=100
 vm.dirty_background_ratio=1
 vm.dirty_ratio=50
+EOF
+
+cat <<EOF > /etc/modules-load.d/i2c.conf
+i2c-dev
 EOF
