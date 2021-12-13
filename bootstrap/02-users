@@ -8,7 +8,7 @@ FIRST_USER_PASS=raspberry
 apk add sudo
 
 for GRP in spi i2c gpio; do
-	addgroup --system $GRP
+	getent group "$GRP" >/dev/null || addgroup --system "$GRP"
 done
 
 adduser -s /bin/ash -D $FIRST_USER_NAME
