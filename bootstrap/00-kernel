@@ -2,10 +2,12 @@
 
 set -xe
 
-apk add linux-rpi linux-rpi4 linux-firmware-brcm raspberrypi-bootloader zram-init
-rc-update add zram-init boot
+apk add linux-rpi linux-rpi4 linux-firmware-brcm raspberrypi-bootloader
+# apk add zram-init
+# rc-update add zram-init boot
 
-echo "modules=loop,squashfs,sd-mod,usb-storage root=LABEL=ROOT rw rootfstype=ext4 elevator=deadline fsck.repair=yes console=serial0,115200 console=tty1 selinux=0 rootwait quiet smsc95xx.turbo_mode=N dwc_otg.lpm_enable=0 kgdboc=serial0,115200 usbhid.mousepoll=8 snd-bcm2835.enable_compat_alsa=1 snd_bcm2835.enable_headphones=1 audit=0" > /boot/cmdline.txt
+echo "modules=loop,squashfs,sd-mod,usb-storage root=LABEL=ROOT rw rootfstype=ext4 elevator=deadline fsck.repair=yes console=tty1 selinux=0 rootwait quiet audit=0" > /boot/cmdline.txt
+#smsc95xx.turbo_mode=N dwc_otg.lpm_enable=0 usbhid.mousepoll=8 snd-bcm2835.enable_compat_alsa=1 snd_bcm2835.enable_headphones=1
 
 cat <<EOF > /boot/config.txt
 [pi3]
@@ -17,14 +19,13 @@ initramfs initramfs-rpi
 [pi4]
 enable_gic=1
 # Enable DRM VC4 V3D driver on top of the dispmanx display stack
-dtoverlay=vc4-fkms-v3d
-max_framebuffers=2
+# dtoverlay=vc4-fkms-v3d
+# max_framebuffers=2
 kernel=vmlinuz-rpi4
 initramfs initramfs-rpi4
 [all]
 arm_64bit=1
 enable_uart=1
-# disable_splash=1
 dtparam=audio=on
 include usercfg.txt
 EOF
