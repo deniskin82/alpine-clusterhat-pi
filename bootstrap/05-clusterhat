@@ -10,6 +10,7 @@ apk add py3-pip py3-usb py3-smbus
 apk add --no-cache -Uu --virtual .build-dependencies python3-dev libffi-dev openssl-dev build-base musl git
 
 # install RPi.GPIO library issue Solved: https://forum.manjaro.org/t/pip-install-rpi-gpio-fail/25788
+# https://github.com/woahbase/alpine-rpigpio/blob/master/Dockerfile_aarch64
 env CFLAGS="-fcommon" pip3 install --no-cache --upgrade pyserial RPi.GPIO
 
 ln -sf /usr/bin/python3 /usr/bin/python
@@ -24,9 +25,15 @@ cp $TMPINSTALL/files/etc/udev/rules.d/90-clusterctrl.rules /etc/udev/rules.d/
 cp -r $TMPINSTALL/files/usr/share/clusterctrl/python/ /usr/share/clusterctrl/
 echo 'TYPE=c' >> /etc/default/clusterctrl
 
-# cat <<EOF > /etc/udev/rules.d/99-i2c.rules
-# SUBSYSTEM=="i2c-dev", MODE="0666"
-# EOF
+# test it as root
+# udevadm trigger /dev/gpiomem
+cat <<EOF > /etc/udev/rules.d/99-gpiomem.rules
+KERNEL=="gpiomem", OWNER="root", GROUP="gpio"
+EOF
+
+cat <<EOF > /etc/udev/rules.d/99-i2c.rules
+SUBSYSTEM=="i2c-dev", OWNER="root", GROUP="i2c", MODE="0660"
+EOF
 
 # cleanup
 rm -rfv $TMPINSTALL
