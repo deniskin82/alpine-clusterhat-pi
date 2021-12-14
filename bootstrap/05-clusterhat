@@ -9,7 +9,7 @@ apk add libusb-dev
 apk add py3-pip py3-usb py3-smbus
 apk add --no-cache -Uu --virtual .build-dependencies python3-dev libffi-dev openssl-dev build-base musl git
 
-# install RPi.GPIO library issue Solved: https://forum.manjaro.org/t/pip-install-rpi-gpio-fail/25788
+# install RPi.GPIO library from source, issue Solved: https://forum.manjaro.org/t/pip-install-rpi-gpio-fail/25788
 # https://github.com/woahbase/alpine-rpigpio/blob/master/Dockerfile_aarch64
 env CFLAGS="-fcommon" pip3 install --no-cache --upgrade pyserial RPi.GPIO
 
