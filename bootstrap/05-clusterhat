@@ -1,0 +1,34 @@
+#!/bin/sh
+
+set -xe
+
+TMPINSTALL=/tmp/clusterhat
+
+# install extra pkgs
+apk add libusb-dev
+apk add py3-pip py3-usb py3-smbus
+apk add --no-cache -Uu --virtual .build-dependencies python3-dev libffi-dev openssl-dev build-base musl git
+
+# install RPi.GPIO library issue Solved: https://forum.manjaro.org/t/pip-install-rpi-gpio-fail/25788
+env CFLAGS="-fcommon" pip3 install --no-cache --upgrade pyserial RPi.GPIO
+
+ln -sf /usr/bin/python3 /usr/bin/python
+
+mkdir -p /usr/share/clusterctrl/ /etc/default/
+
+git clone https://github.com/burtyb/clusterhat-image.git $TMPINSTALL
+
+cp $TMPINSTALL/files/usr/sbin/cluster* /usr/sbin/
+cp $TMPINSTALL/files/usr/share/clusterctrl/default-clusterctrl /etc/default/clusterctrl
+cp $TMPINSTALL/files/etc/udev/rules.d/90-clusterctrl.rules /etc/udev/rules.d/
+cp -r $TMPINSTALL/files/usr/share/clusterctrl/python/ /usr/share/clusterctrl/
+echo 'TYPE=c' >> /etc/default/clusterctrl
+
+# cat <<EOF > /etc/udev/rules.d/99-i2c.rules
+# SUBSYSTEM=="i2c-dev", MODE="0666"
+# EOF
+
+# cleanup
+rm -rfv $TMPINSTALL
+apk del --purge .build-dependencies
+apk add --no-cache --purge curl ca-certificates musl wiringpi
