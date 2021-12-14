@@ -2,7 +2,7 @@
 
 set -xe
 
-apk add dosfstools e2fsprogs-extra parted
+apk add dosfstools e2fsprogs-extra parted lsblk
 
 cat <<EOF > /usr/bin/first-boot
 #!/bin/sh
