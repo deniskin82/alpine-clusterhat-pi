@@ -28,3 +28,11 @@ cat <<EOF > /etc/motd
 Welcome to Alpine!
 
 EOF
+
+# enable color prompt
+test -f /etc/profile.d/color_prompt.sh.disabled && mv /etc/profile.d/color_prompt.sh.disabled /etc/profile.d/color_prompt.sh
+
+# extra alias
+cat <<EOF > /etc/profile.d/ll.sh
+alias ll="ls -l"
+EOF
