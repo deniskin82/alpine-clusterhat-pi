@@ -52,6 +52,7 @@ cp -R bootstrap/ /alpine/
 rm -rf /alpine/var/lib/apt/lists/*
 rm -rf /alpine/var/cache/apk/*
 rm -rf /alpine/root/*
+rm -rf /alpine/tmp/*
 rm -rf /alpine/bootstrap/
 rm  /alpine/env.sh /alpine/etc/resolv.conf /alpine/enter-chroot /alpine/destroy
 find /alpine -iname "*-" -delete
