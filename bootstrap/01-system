@@ -24,5 +24,7 @@ sed -i 's/\/bin\/ash/\/bin\/bash/g' /etc/passwd
 
 # clean motd
 cat <<EOF > /etc/motd
+
 Welcome to Alpine!
+
 EOF
