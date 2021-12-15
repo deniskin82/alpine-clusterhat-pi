@@ -2,10 +2,11 @@
 
 set -xe
 
-TMPINSTALL=/tmp/clusterhat
+TMPCLUSTERHAT=/tmp/clusterhat
+TMPUSBBOOT=/tmp/usbboot
 
 # install extra pkgs
-apk add libusb-dev
+apk add libusb-dev util-linux-misc usbutils
 apk add py3-pip py3-usb py3-smbus
 apk add --no-cache -Uu --virtual .build-dependencies python3-dev libffi-dev openssl-dev build-base musl git
 
@@ -15,15 +16,19 @@ env CFLAGS="-fcommon" pip3 install --no-cache --upgrade pyserial RPi.GPIO
 
 ln -sf /usr/bin/python3 /usr/bin/python
 
-mkdir -p /usr/share/clusterctrl/ /etc/default/
+mkdir -p /usr/share/clusterctrl/ /etc/default/ /var/lib/clusterctrl/boot /var/lib/clusterctrl/nfs/p{1..252}
 
-git clone https://github.com/burtyb/clusterhat-image.git $TMPINSTALL
+ln -sf /var/lib/clusterctrl /var/lib/clusterhat
+ln -sf /boot/bootcode.bin /var/lib/clusterctrl/boot/bootcode.bin
 
-cp $TMPINSTALL/files/usr/sbin/cluster* /usr/sbin/
-cp $TMPINSTALL/files/usr/share/clusterctrl/default-clusterctrl /etc/default/clusterctrl
-cp $TMPINSTALL/files/etc/udev/rules.d/90-clusterctrl.rules /etc/udev/rules.d/
-cp -r $TMPINSTALL/files/usr/share/clusterctrl/python/ /usr/share/clusterctrl/
+git clone https://github.com/burtyb/clusterhat-image.git $TMPCLUSTERHAT
+
+cp $TMPCLUSTERHAT/files/usr/sbin/* /usr/sbin/
+cp $TMPCLUSTERHAT/files/usr/share/clusterctrl/default-clusterctrl /etc/default/clusterctrl
+cp $TMPCLUSTERHAT/files/etc/udev/rules.d/90-clusterctrl.rules /etc/udev/rules.d/
+cp -r $TMPCLUSTERHAT/files/usr/share/clusterctrl /usr/share/
 echo 'TYPE=c' >> /etc/default/clusterctrl
+cd -
 
 # test it as root
 # udevadm trigger /dev/gpiomem
@@ -31,11 +36,112 @@ cat <<EOF > /etc/udev/rules.d/99-gpiomem.rules
 KERNEL=="gpiomem", OWNER="root", GROUP="gpio"
 EOF
 
-cat <<EOF > /etc/udev/rules.d/99-i2c.rules
-SUBSYSTEM=="i2c-dev", OWNER="root", GROUP="i2c", MODE="0660"
+cat <<EOF > /etc/udev/rules.d/99-com.rules
+SUBSYSTEM=="input", GROUP="input", MODE="0660"
+SUBSYSTEM=="i2c-dev", GROUP="i2c", MODE="0660"
+SUBSYSTEM=="spidev", GROUP="spi", MODE="0660"
+SUBSYSTEM=="bcm2835-gpiomem", GROUP="gpio", MODE="0660"
+SUBSYSTEM=="rpivid-*", GROUP="video", MODE="0660"
+
+KERNEL=="vcsm-cma", GROUP="video", MODE="0660"
+SUBSYSTEM=="dma_heap", GROUP="video", MODE="0660"
+
+SUBSYSTEM=="gpio", GROUP="gpio", MODE="0660"
+SUBSYSTEM=="gpio*", PROGRAM="/bin/sh -c '\
+	chown -R root:gpio /sys/class/gpio && chmod -R 770 /sys/class/gpio;\
+	chown -R root:gpio /sys/devices/virtual/gpio && chmod -R 770 /sys/devices/virtual/gpio;\
+	chown -R root:gpio /sys\$devpath && chmod -R 770 /sys\$devpath\
+'"
+
+SUBSYSTEM=="pwm*", PROGRAM="/bin/sh -c '\
+	chown -R root:gpio /sys/class/pwm && chmod -R 770 /sys/class/pwm;\
+	chown -R root:gpio /sys/devices/platform/soc/*.pwm/pwm/pwmchip* && chmod -R 770 /sys/devices/platform/soc/*.pwm/pwm/pwmchip*\
+'"
+
+KERNEL=="ttyAMA0", PROGRAM="/bin/sh -c '\
+	ALIASES=/proc/device-tree/aliases; \
+	if cmp -s \$\$ALIASES/uart0 \$\$ALIASES/serial0; then \
+		echo 0;\
+	elif cmp -s \$\$ALIASES/uart0 \$\$ALIASES/serial1; then \
+		echo 1; \
+	else \
+		exit 1; \
+	fi\
+'", SYMLINK+="serial%c"
+
+KERNEL=="ttyAMA1", PROGRAM="/bin/sh -c '\
+	ALIASES=/proc/device-tree/aliases; \
+	if [ -e /dev/ttyAMA0 ]; then \
+		exit 1; \
+	elif cmp -s \$\$ALIASES/uart0 \$\$ALIASES/serial0; then \
+		echo 0;\
+	elif cmp -s \$\$ALIASES/uart0 \$\$ALIASES/serial1; then \
+		echo 1; \
+	else \
+		exit 1; \
+	fi\
+'", SYMLINK+="serial%c"
+
+KERNEL=="ttyS0", PROGRAM="/bin/sh -c '\
+	ALIASES=/proc/device-tree/aliases; \
+	if cmp -s \$\$ALIASES/uart1 \$\$ALIASES/serial0; then \
+		echo 0; \
+	elif cmp -s \$\$ALIASES/uart1 \$\$ALIASES/serial1; then \
+		echo 1; \
+	else \
+		exit 1; \
+	fi \
+'", SYMLINK+="serial%c"
+
+ACTION=="add", SUBSYSTEM=="vtconsole", KERNEL=="vtcon1", RUN+="/bin/sh -c '\
+	if echo RPi-Sense FB | cmp -s /sys/class/graphics/fb0/name; then \
+		echo 0 > /sys\$devpath/bind; \
+	fi; \
+'"
+
 EOF
 
+# pull rpi-update scripts
+wget -q --show-progress --progress=bar:force:noscroll --continue \
+  -P /usr/bin/ \
+  https://raw.githubusercontent.com/raspberrypi/rpi-update/master/rpi-update \
+  https://raw.githubusercontent.com/raspberrypi/rpi-eeprom/master/rpi-eeprom-config \
+  https://raw.githubusercontent.com/raspberrypi/rpi-eeprom/master/rpi-eeprom-update
+
+wget -q --show-progress --progress=bar:force:noscroll --continue \
+  -O /etc/default/rpi-eeprom-update \
+  https://raw.githubusercontent.com/raspberrypi/rpi-eeprom/master/rpi-eeprom-update-default
+  
+chmod -v +x /usr/bin/rpi-*
+
+# compile usbboot/rpiboot
+git clone https://github.com/raspberrypi/usbboot.git $TMPUSBBOOT
+cd $TMPUSBBOOT
+cat <<EOF > $TMPUSBBOOT/main.c.diff
+diff --git a/main.c b/main.c
+index 1732afa..b5e9212 100644
+--- a/main.c
++++ b/main.c
+@@ -11,9 +11,10 @@
+ #include "msd/start4.h"
+
+ /* Assume BSD without native fmemopen() if doesn't seem to be glibc */
+-#if defined(__APPLE__) || (!defined(_GNU_SOURCE) && (!defined(_POSIX_C_SOURCE) || _POSIX_C_SOURCE < 200809L))
++/* #if defined(__APPLE__) || (!defined(_GNU_SOURCE) && (!defined(_POSIX_C_SOURCE) || _POSIX_C_SOURCE < 200809L))
+ #include "fmemopen.c" // BSD fmemopen() compat in terms of funopen()
+ #endif
++*/
+
+ int signed_boot = 0;
+ int verbose = 0;
+
+EOF
+patch -i main.c.diff
+make
+make install
+cd -
+
 # cleanup
-rm -rfv $TMPINSTALL
+rm -rfv $TMPCLUSTERHAT $TMPUSBBOOT
 apk del --purge .build-dependencies
 apk add --no-cache --purge curl ca-certificates musl wiringpi
