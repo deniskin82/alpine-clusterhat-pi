@@ -4,6 +4,7 @@
 
 arch?=aarch64
 version?=3.15.0
+# https://alpine.global.ssl.fastly.net/alpine/
 mirror?=http://dl-cdn.alpinelinux.org/alpine
 ver:=$(basename $(version))
 
