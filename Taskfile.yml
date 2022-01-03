@@ -21,9 +21,10 @@ tasks:
       - task: format-partitions
       - task: mount-partitions
       - task: alpine-chroot-install
+      - task: cleanup
       - task: umount-alpine
       - task: shrink-partition
-      - task: cleanup
+      - task: destroy-loopdevice
       - task: compress-image
 
   create-disk:
@@ -93,6 +94,10 @@ tasks:
       - curl https://raw.githubusercontent.com/alpinelinux/alpine-chroot-install/master/alpine-chroot-install | sh -s -- -a {{.ARCH}} -b {{.ALPINE_BRANCH}} -m {{.ALPINE_MIRROR}} -d {{.ALPINE_DIR}}
       - cp -R bootstrap/ {{.ALPINE_DIR}}/
       - sh {{.ALPINE_DIR}}/enter-chroot run-parts /bootstrap/
+
+  cleanup:
+    desc: Do some cleanup under chroot
+    cmds:
       - rm -rf {{.ALPINE_DIR}}/var/lib/apt/lists/*
       - rm -rf {{.ALPINE_DIR}}/var/cache/apk/*
       - rm -rf {{.ALPINE_DIR}}/root/*
@@ -118,7 +123,7 @@ tasks:
     cmds:
       - umount -lf {{.ALPINE_DIR}}
 
-  cleanup:
+  destroy-loopdevice:
     vars:
       LOOP_DEV:
         sh: losetup -n -O NAME -j "{{.OUTPUT_IMG}}"
