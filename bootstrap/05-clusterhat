@@ -4,9 +4,10 @@ set -xe
 
 TMPCLUSTERHAT=/tmp/clusterhat
 TMPUSBBOOT=/tmp/usbboot
+WORKDIR=$(dirname -- $0)
 
 # install extra pkgs
-apk add libusb-dev util-linux-misc usbutils
+apk add libusb-dev util-linux-misc usbutils nfs-utils
 apk add py3-pip py3-usb py3-smbus
 apk add --no-cache -Uu --virtual .build-dependencies python3-dev libffi-dev openssl-dev build-base musl git
 
@@ -16,7 +17,7 @@ env CFLAGS="-fcommon" pip3 install --no-cache --upgrade pyserial RPi.GPIO
 
 ln -sf /usr/bin/python3 /usr/bin/python
 
-mkdir -p /usr/share/clusterctrl/ /etc/default/ /var/lib/clusterctrl/boot /var/lib/clusterctrl/nfs/p{1..252}
+mkdir -p /usr/share/clusterctrl/ /etc/default/ /var/lib/clusterctrl/boot
 
 ln -sf /var/lib/clusterctrl /var/lib/clusterhat
 ln -sf /boot/bootcode.bin /var/lib/clusterctrl/boot/bootcode.bin
@@ -30,76 +31,30 @@ cp -r $TMPCLUSTERHAT/files/usr/share/clusterctrl /usr/share/
 echo 'TYPE=c' >> /etc/default/clusterctrl
 cd -
 
+rc-update -a del nfs | true
+
+# Setup NFS exports for NFSROOT
+for P in `awk 'BEGIN {for (i = 1; i <= 252; ++i) print i }' | xargs`; do
+ echo "/var/lib/clusterctrl/nfs/p$P 172.19.180.$P(rw,sync,no_subtree_check,no_root_squash)" >> /etc/exports
+ mkdir -p "/var/lib/clusterctrl/nfs/p$P"
+done
+
 # test it as root
 # udevadm trigger /dev/gpiomem
-cat <<EOF > /etc/udev/rules.d/99-gpiomem.rules
-KERNEL=="gpiomem", OWNER="root", GROUP="gpio"
-EOF
+cp ${WORKDIR}/files/etc/udev/rules.d/99-gpiomem.rules /etc/udev/rules.d/99-gpiomem.rules
+cp ${WORKDIR}/files/etc/udev/rules.d/99-com.rules /etc/udev/rules.d/99-com.rules
 
-cat <<EOF > /etc/udev/rules.d/99-com.rules
-SUBSYSTEM=="input", GROUP="input", MODE="0660"
-SUBSYSTEM=="i2c-dev", GROUP="i2c", MODE="0660"
-SUBSYSTEM=="spidev", GROUP="spi", MODE="0660"
-SUBSYSTEM=="bcm2835-gpiomem", GROUP="gpio", MODE="0660"
-SUBSYSTEM=="rpivid-*", GROUP="video", MODE="0660"
-
-KERNEL=="vcsm-cma", GROUP="video", MODE="0660"
-SUBSYSTEM=="dma_heap", GROUP="video", MODE="0660"
-
-SUBSYSTEM=="gpio", GROUP="gpio", MODE="0660"
-SUBSYSTEM=="gpio*", PROGRAM="/bin/sh -c '\
-	chown -R root:gpio /sys/class/gpio && chmod -R 770 /sys/class/gpio;\
-	chown -R root:gpio /sys/devices/virtual/gpio && chmod -R 770 /sys/devices/virtual/gpio;\
-	chown -R root:gpio /sys\$devpath && chmod -R 770 /sys\$devpath\
-'"
-
-SUBSYSTEM=="pwm*", PROGRAM="/bin/sh -c '\
-	chown -R root:gpio /sys/class/pwm && chmod -R 770 /sys/class/pwm;\
-	chown -R root:gpio /sys/devices/platform/soc/*.pwm/pwm/pwmchip* && chmod -R 770 /sys/devices/platform/soc/*.pwm/pwm/pwmchip*\
-'"
-
-KERNEL=="ttyAMA0", PROGRAM="/bin/sh -c '\
-	ALIASES=/proc/device-tree/aliases; \
-	if cmp -s \$\$ALIASES/uart0 \$\$ALIASES/serial0; then \
-		echo 0;\
-	elif cmp -s \$\$ALIASES/uart0 \$\$ALIASES/serial1; then \
-		echo 1; \
-	else \
-		exit 1; \
-	fi\
-'", SYMLINK+="serial%c"
-
-KERNEL=="ttyAMA1", PROGRAM="/bin/sh -c '\
-	ALIASES=/proc/device-tree/aliases; \
-	if [ -e /dev/ttyAMA0 ]; then \
-		exit 1; \
-	elif cmp -s \$\$ALIASES/uart0 \$\$ALIASES/serial0; then \
-		echo 0;\
-	elif cmp -s \$\$ALIASES/uart0 \$\$ALIASES/serial1; then \
-		echo 1; \
-	else \
-		exit 1; \
-	fi\
-'", SYMLINK+="serial%c"
-
-KERNEL=="ttyS0", PROGRAM="/bin/sh -c '\
-	ALIASES=/proc/device-tree/aliases; \
-	if cmp -s \$\$ALIASES/uart1 \$\$ALIASES/serial0; then \
-		echo 0; \
-	elif cmp -s \$\$ALIASES/uart1 \$\$ALIASES/serial1; then \
-		echo 1; \
-	else \
-		exit 1; \
-	fi \
-'", SYMLINK+="serial%c"
-
-ACTION=="add", SUBSYSTEM=="vtconsole", KERNEL=="vtcon1", RUN+="/bin/sh -c '\
-	if echo RPi-Sense FB | cmp -s /sys/class/graphics/fb0/name; then \
-		echo 0 > /sys\$devpath/bind; \
-	fi; \
-'"
-
-EOF
+# Allow root login from serial.
+echo ttyS0 >> /etc/securetty
+echo ttyGS0 >> /etc/securetty
+# Make sure the USB virtual serial device is available.
+echo g_serial >> /etc/modules
+# Make sure wireless networking is available.
+echo 8723bs >> /etc/modules
+# These enable the USB virtual serial device, and the standard serial
+# pins to both be used as TTYs
+echo ttyS0::respawn:/sbin/getty -L ttyS0 115200 vt102 >> /etc/inittab
+echo ttyGS0::respawn:/sbin/getty -L ttyGS0 115200 vt102 >> /etc/inittab
 
 # pull rpi-update scripts
 wget -q --show-progress --progress=bar:force:noscroll --continue \
@@ -111,7 +66,7 @@ wget -q --show-progress --progress=bar:force:noscroll --continue \
 wget -q --show-progress --progress=bar:force:noscroll --continue \
   -O /etc/default/rpi-eeprom-update \
   https://raw.githubusercontent.com/raspberrypi/rpi-eeprom/master/rpi-eeprom-update-default
-  
+
 chmod -v +x /usr/bin/rpi-*
 
 # compile usbboot/rpiboot
