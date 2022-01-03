@@ -6,7 +6,7 @@ tasks:
     desc: Install extra packages on Alpine
     cmds:
       - apk update
-      - apk add dosfstools xxd util-linux curl
+      - apk add --no-cache dosfstools xxd util-linux curl
   install-tools-ubuntu:
     desc: Install extra packages on Ubuntu
     cmds:
