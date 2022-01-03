@@ -7,8 +7,8 @@ TMPUSBBOOT=/tmp/usbboot
 WORKDIR=$(dirname -- $0)
 
 # install extra pkgs
-apk add libusb-dev util-linux-misc usbutils nfs-utils
-apk add py3-pip py3-usb py3-smbus
+apk add --no-cache libusb-dev util-linux-misc usbutils nfs-utils
+apk add --no-cache py3-pip py3-usb py3-smbus
 apk add --no-cache -Uu --virtual .build-dependencies python3-dev libffi-dev openssl-dev build-base musl git
 
 # install RPi.GPIO library from source, issue Solved: https://forum.manjaro.org/t/pip-install-rpi-gpio-fail/25788
@@ -98,5 +98,5 @@ cd -
 
 # cleanup
 rm -rfv $TMPCLUSTERHAT $TMPUSBBOOT
-apk del --purge .build-dependencies
+apk del --purge .build-dependencies build-base
 apk add --no-cache --purge curl ca-certificates musl wiringpi
