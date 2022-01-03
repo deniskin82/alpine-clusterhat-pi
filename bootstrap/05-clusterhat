@@ -72,25 +72,7 @@ chmod -v +x /usr/bin/rpi-*
 # compile usbboot/rpiboot
 git clone https://github.com/raspberrypi/usbboot.git $TMPUSBBOOT
 cd $TMPUSBBOOT
-cat <<EOF > $TMPUSBBOOT/main.c.diff
-diff --git a/main.c b/main.c
-index 1732afa..b5e9212 100644
---- a/main.c
-+++ b/main.c
-@@ -11,9 +11,10 @@
- #include "msd/start4.h"
-
- /* Assume BSD without native fmemopen() if doesn't seem to be glibc */
--#if defined(__APPLE__) || (!defined(_GNU_SOURCE) && (!defined(_POSIX_C_SOURCE) || _POSIX_C_SOURCE < 200809L))
-+/* #if defined(__APPLE__) || (!defined(_GNU_SOURCE) && (!defined(_POSIX_C_SOURCE) || _POSIX_C_SOURCE < 200809L))
- #include "fmemopen.c" // BSD fmemopen() compat in terms of funopen()
- #endif
-+*/
-
- int signed_boot = 0;
- int verbose = 0;
-
-EOF
+cp ${WORKDIR}/usbboot/main.c.diff $TMPUSBBOOT/
 patch -i main.c.diff
 make
 make install
