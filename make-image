@@ -2,8 +2,10 @@
 
 set -xe
 
+TASK_VER='v3.9.2'
+
 wget -q --show-progress --progress=bar:force:noscroll --continue \
-  -P /tmp/ https://github.com/go-task/task/releases/download/v3.9.2/task_linux_amd64.tar.gz
+  -P /tmp/ https://github.com/go-task/task/releases/download/${TASK_VER}/task_linux_amd64.tar.gz
 
 tar -C /tmp/ -zvxf /tmp/task_linux_amd64.tar.gz task
 /tmp/task -t Taskfile.yml

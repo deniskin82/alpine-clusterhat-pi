@@ -5,6 +5,8 @@ vars:
   ALPINE_DIR: '/alpine'
   ALPINE_BRANCH: 'v3.15'
   ALPINE_MIRROR: 'http://dl-cdn.alpinelinux.org/alpine'
+  ALPINE_CHROOT_INSTALL: 'https://raw.githubusercontent.com/alpinelinux/alpine-chroot-install/master/alpine-chroot-install'
+  ROOT_FSOPTS: '^has_journal,^64bit'
   ARCH: 'aarch64'
   OS_DISTRO:
     sh: source /etc/os-release && echo $ID
@@ -71,7 +73,7 @@ tasks:
       ROOT_DEV: "{{.LOOP_DEV}}p2"
     cmds:
       - mkfs.fat -F32 -n ALPINE "{{.BOOT_DEV}}"
-      - mkfs.ext4 -q -L ROOT -O '^has_journal,^64bit' "{{.ROOT_DEV}}"
+      - mkfs.ext4 -q -L ROOT -O '{{.ROOT_FSOPTS}}' "{{.ROOT_DEV}}"
 
   mount-partitions:
     desc: Assign partitions to a loop device
@@ -91,7 +93,7 @@ tasks:
   alpine-chroot-install:
     desc: Install Alpine Linux under chroot
     cmds:
-      - curl https://raw.githubusercontent.com/alpinelinux/alpine-chroot-install/master/alpine-chroot-install | sh -s -- -a {{.ARCH}} -b {{.ALPINE_BRANCH}} -m {{.ALPINE_MIRROR}} -d {{.ALPINE_DIR}}
+      - curl {{.ALPINE_CHROOT_INSTALL}} | sh -s -- -a {{.ARCH}} -b {{.ALPINE_BRANCH}} -m {{.ALPINE_MIRROR}} -d {{.ALPINE_DIR}}
       - cp -R bootstrap/ {{.ALPINE_DIR}}/
       - sh {{.ALPINE_DIR}}/enter-chroot run-parts /bootstrap/
 
