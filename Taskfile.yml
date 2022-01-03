@@ -27,6 +27,7 @@ tasks:
       - task: compress-image
 
   create-disk:
+    desc: Create a target image to work on
     cmds:
       - task: mkdir
         vars: {FOLDER: "dist"}
@@ -36,6 +37,7 @@ tasks:
       - truncate -s 2G "{{.OUTPUT_IMG}}"
 
   create-partitions:
+    desc: Create Boot and Root partitions
     silent: false
     ignore_error: true
     status:
@@ -60,6 +62,7 @@ tasks:
         EOF
 
   format-partitions:
+    desc: Create filesystems for Boot and Root partitions
     vars:
       LOOP_DEV:
         sh: losetup --partscan --show --find "{{.OUTPUT_IMG}}"
@@ -70,6 +73,7 @@ tasks:
       - mkfs.ext4 -q -L ROOT -O '^has_journal,^64bit' "{{.ROOT_DEV}}"
 
   mount-partitions:
+    desc: Assign partitions to a loop device
     vars:
       LOOP_DEV:
         sh: losetup -n -O NAME -j "{{.OUTPUT_IMG}}"
@@ -84,6 +88,7 @@ tasks:
       - mount --make-private "{{.BOOT_DEV}}" "{{.ALPINE_DIR}}/boot"
 
   alpine-chroot-install:
+    desc: Install Alpine Linux under chroot
     cmds:
       - curl https://raw.githubusercontent.com/alpinelinux/alpine-chroot-install/master/alpine-chroot-install | sh -s -- -a {{.ARCH}} -b {{.ALPINE_BRANCH}} -m {{.ALPINE_MIRROR}} -d {{.ALPINE_DIR}}
       - cp -R bootstrap/ {{.ALPINE_DIR}}/
@@ -101,10 +106,10 @@ tasks:
       - sync
 
   shrink-partition:
+    desc: Zeroing Root partition
     vars:
       LOOP_DEV:
         sh: losetup -n -O NAME -j "{{.OUTPUT_IMG}}"
-      BOOT_DEV: "{{.LOOP_DEV}}p1"
       ROOT_DEV: "{{.LOOP_DEV}}p2"
     cmds:
       - zerofree -v {{.ROOT_DEV}}
@@ -121,6 +126,7 @@ tasks:
       - losetup -d {{.LOOP_DEV}}
 
   compress-image:
+    desc: Create compressed target image
     cmds:
       - gzip -c "{{.OUTPUT_IMG}}" > "dist/alpine-rpi-{{.ALPINE_BRANCH}}-{{.ARCH}}.img.gz"
 
