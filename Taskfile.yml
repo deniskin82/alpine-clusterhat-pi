@@ -1,0 +1,129 @@
+version: '3'
+
+vars:
+  OUTPUT_IMG: '/dist/target.img'
+  ALPINE_DIR: '/alpine'
+  ALPINE_BRANCH: 'v3.15'
+  ALPINE_MIRROR: 'http://dl-cdn.alpinelinux.org/alpine'
+  ARCH: 'aarch64'
+  OS_DISTRO:
+    sh: source /etc/os-release && echo $ID
+
+includes:
+  dist: ./Taskfile_{{OS}}.yml
+
+tasks:
+  default:
+    cmds:
+      - task: dist:install-tools-{{.OS_DISTRO}}
+      - task: create-disk
+      - task: create-partitions
+      - task: format-partitions
+      - task: mount-partitions
+      - task: alpine-chroot-install
+      - task: umount-alpine
+      - task: shrink-partition
+      - task: cleanup
+      - task: compress-image
+
+  create-disk:
+    cmds:
+      - task: mkdir
+        vars: {FOLDER: "dist"}
+      - task: mkdir
+        vars: {FOLDER: "/dist"}
+      - rm -Rf "{{.OUTPUT_IMG}}"
+      - truncate -s 2G "{{.OUTPUT_IMG}}"
+
+  create-partitions:
+    silent: false
+    ignore_error: true
+    status:
+      - fdisk "{{.OUTPUT_IMG}}" -l | grep Linux
+    cmds:
+      - |
+        fdisk -H 255 -S 63 "{{.OUTPUT_IMG}}" <<-EOF
+        o
+        n
+        p
+        1
+
+        +512MB
+        t
+        c
+        n
+        p
+        2
+
+
+        w
+        EOF
+
+  format-partitions:
+    vars:
+      LOOP_DEV:
+        sh: losetup --partscan --show --find "{{.OUTPUT_IMG}}"
+      BOOT_DEV: "{{.LOOP_DEV}}p1"
+      ROOT_DEV: "{{.LOOP_DEV}}p2"
+    cmds:
+      - mkfs.fat -F32 -n ALPINE "{{.BOOT_DEV}}"
+      - mkfs.ext4 -q -L ROOT -O '^has_journal,^64bit' "{{.ROOT_DEV}}"
+
+  mount-partitions:
+    vars:
+      LOOP_DEV:
+        sh: losetup -n -O NAME -j "{{.OUTPUT_IMG}}"
+      BOOT_DEV: "{{.LOOP_DEV}}p1"
+      ROOT_DEV: "{{.LOOP_DEV}}p2"
+    cmds:
+      - task: mkdir
+        vars: {FOLDER: "{{.ALPINE_DIR}}"}
+      - mount --make-private "{{.ROOT_DEV}}" "{{.ALPINE_DIR}}"
+      - task: mkdir
+        vars: {FOLDER: "{{.ALPINE_DIR}}/boot"}
+      - mount --make-private "{{.BOOT_DEV}}" "{{.ALPINE_DIR}}/boot"
+
+  alpine-chroot-install:
+    cmds:
+      - curl https://raw.githubusercontent.com/alpinelinux/alpine-chroot-install/master/alpine-chroot-install | sh -s -- -a {{.ARCH}} -b {{.ALPINE_BRANCH}} -m {{.ALPINE_MIRROR}} -d {{.ALPINE_DIR}}
+      - cp -R bootstrap/ {{.ALPINE_DIR}}/
+      - sh {{.ALPINE_DIR}}/enter-chroot run-parts /bootstrap/
+      - rm -rf {{.ALPINE_DIR}}/var/lib/apt/lists/*
+      - rm -rf {{.ALPINE_DIR}}/var/cache/apk/*
+      - rm -rf {{.ALPINE_DIR}}/root/*
+      - rm -rf {{.ALPINE_DIR}}/tmp/*
+      - rm -rf {{.ALPINE_DIR}}/bootstrap/
+      - rm -f {{.ALPINE_DIR}}/env.sh {{.ALPINE_DIR}}/etc/resolv.conf {{.ALPINE_DIR}}/enter-chroot {{.ALPINE_DIR}}/destroy
+      - find {{.ALPINE_DIR}} -iname "*-" -delete
+      - find {{.ALPINE_DIR}} -iname "*~" -delete
+      - dd if=/dev/zero of={{.ALPINE_DIR}}/EMPTY bs=1M | true
+      - rm -vf {{.ALPINE_DIR}}/EMPTY
+      - sync
+
+  shrink-partition:
+    vars:
+      LOOP_DEV:
+        sh: losetup -n -O NAME -j "{{.OUTPUT_IMG}}"
+      BOOT_DEV: "{{.LOOP_DEV}}p1"
+      ROOT_DEV: "{{.LOOP_DEV}}p2"
+    cmds:
+      - zerofree -v {{.ROOT_DEV}}
+
+  umount-alpine:
+    cmds:
+      - umount -lf {{.ALPINE_DIR}}
+
+  cleanup:
+    vars:
+      LOOP_DEV:
+        sh: losetup -n -O NAME -j "{{.OUTPUT_IMG}}"
+    cmds:
+      - losetup -d {{.LOOP_DEV}}
+
+  compress-image:
+    cmds:
+      - gzip -c "{{.OUTPUT_IMG}}" > "dist/alpine-rpi-{{.ALPINE_BRANCH}}-{{.ARCH}}.img.gz"
+
+  mkdir:
+    cmds:
+      - mkdir -p {{.FOLDER}}

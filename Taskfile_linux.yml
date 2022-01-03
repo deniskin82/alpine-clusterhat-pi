@@ -1,0 +1,12 @@
+---
+version: '3'
+
+tasks:
+  install-tools-alpine:
+    cmds:
+      - apk update
+      - apk add dosfstools xxd util-linux curl
+  install-tools-ubuntu:
+    cmds:
+      - apt-get update
+      - apt install dosfstools xxd util-linux curl
