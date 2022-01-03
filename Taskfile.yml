@@ -12,12 +12,12 @@ vars:
     sh: source /etc/os-release && echo $ID
 
 includes:
-  dist: ./Taskfile_{{OS}}.yml
+  dist: ./tasks/pkgs_{{OS}}.yml
 
 tasks:
   default:
     cmds:
-      - task: dist:install-tools-{{.OS_DISTRO}}
+      - task: dist:install-extra-{{.OS_DISTRO}}
       - task: create-disk
       - task: create-partitions
       - task: format-partitions
