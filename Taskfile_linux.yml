@@ -9,4 +9,4 @@ tasks:
   install-tools-ubuntu:
     cmds:
       - apt-get update
-      - apt install dosfstools xxd util-linux curl
+      - apt-get install dosfstools xxd util-linux curl
