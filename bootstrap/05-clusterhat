@@ -72,7 +72,7 @@ chmod -v +x /usr/bin/rpi-*
 # compile usbboot/rpiboot
 git clone https://github.com/raspberrypi/usbboot.git $TMPUSBBOOT
 cd $TMPUSBBOOT
-cp ${WORKDIR}/usbboot/main.c.diff $TMPUSBBOOT/
+cp ${WORKDIR}/files/usbboot/main.c.diff $TMPUSBBOOT/
 patch -i main.c.diff
 make
 make install
