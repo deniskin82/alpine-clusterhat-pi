@@ -3,11 +3,11 @@ version: '3'
 vars:
   OUTPUT_IMG: '/dist/target.img'
   ALPINE_DIR: '/alpine'
-  ALPINE_BRANCH: 'v3.15'
-  ALPINE_MIRROR: 'http://dl-cdn.alpinelinux.org/alpine'
+  ALPINE_BRANCH: '{{default "v3.15" .ALPINE_BRANCH}}'
+  ALPINE_MIRROR: '{{default "http://dl-cdn.alpinelinux.org/alpine" .ALPINE_MIRROR}}'
   ALPINE_CHROOT_INSTALL: 'https://raw.githubusercontent.com/alpinelinux/alpine-chroot-install/master/alpine-chroot-install'
   ROOT_FSOPTS: '^has_journal,^64bit'
-  ARCH: 'aarch64'
+  ARCH: '{{default "aarch64" .ARCH}}'
   OS_DISTRO:
     sh: source /etc/os-release && echo $ID
 
@@ -24,8 +24,8 @@ tasks:
       - task: mount-partitions
       - task: alpine-chroot-install
       - task: cleanup
-      - task: umount-alpine
-      - task: shrink-partition
+      - task: umount-partitions
+      - task: shrink-root-partition
       - task: destroy-loopdevice
       - task: compress-image
 
@@ -112,7 +112,7 @@ tasks:
       - rm -vf {{.ALPINE_DIR}}/EMPTY
       - sync
 
-  shrink-partition:
+  shrink-root-partition:
     desc: Zeroing Root partition
     vars:
       LOOP_DEV:
@@ -121,7 +121,7 @@ tasks:
     cmds:
       - zerofree -v {{.ROOT_DEV}}
 
-  umount-alpine:
+  umount-partitions:
     cmds:
       - umount -lf {{.ALPINE_DIR}}
 
