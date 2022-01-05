@@ -16,7 +16,7 @@ PWD=$(shell pwd)
 .PHONY: build
 build:
 	docker build runner -t runner
-	docker run --privileged --rm -v /dev:/dev:ro -v ${PWD}:/runner -w /runner -e ALPINE_BRANCH=v$(ver) -e ALPINE_MIRROR=$(mirror) -e ARCH=$(arch) runner task -t Taskfile.yml
+	docker run --privileged --rm -v /dev:/dev:ro -v ${PWD}:/runner -w /runner -e ALPINE_BRANCH=v$(ver) -e ALPINE_MIRROR=$(mirror) -e ARCH=$(arch) runner
 
 # report:
 # 	@echo Alpine $(ver) $(arch)
