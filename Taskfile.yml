@@ -17,6 +17,7 @@ includes:
 tasks:
   default:
     cmds:
+      # - env
       - task: dist:install-extra-{{.OS_DISTRO}}
       - task: create-disk
       - task: create-partitions
@@ -106,8 +107,8 @@ tasks:
       - rm -rf {{.ALPINE_DIR}}/tmp/*
       - rm -rf {{.ALPINE_DIR}}/bootstrap/
       - rm -f {{.ALPINE_DIR}}/env.sh {{.ALPINE_DIR}}/etc/resolv.conf {{.ALPINE_DIR}}/enter-chroot {{.ALPINE_DIR}}/destroy
-      - find {{.ALPINE_DIR}} -iname "*-" -delete
-      - find {{.ALPINE_DIR}} -iname "*~" -delete
+      - find {{.ALPINE_DIR}} -iname '*-' -delete
+      - find {{.ALPINE_DIR}} -iname '*~' -delete
       - dd if=/dev/zero of={{.ALPINE_DIR}}/EMPTY bs=1M | true
       - rm -vf {{.ALPINE_DIR}}/EMPTY
       - sync
