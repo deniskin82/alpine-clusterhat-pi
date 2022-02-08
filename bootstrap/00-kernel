@@ -1,4 +1,6 @@
 #!/bin/sh
+arm64=0
+[[ "$ARCH" == "aarch64" ]] && arm64=1
 
 set -xe
 
@@ -24,7 +26,7 @@ enable_gic=1
 kernel=vmlinuz-rpi4
 initramfs initramfs-rpi4
 [all]
-arm_64bit=1
+arm_64bit=$arm64
 enable_uart=1
 dtparam=audio=on
 include usercfg.txt
